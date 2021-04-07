@@ -9,6 +9,9 @@ const double Amp = 56173;//65535;
 
 uLCD_4DGL uLCD(D1, D0, D2); // serial tx, serial rx, reset pin;
 
+AnalogIn Ain(A5);
+//PwmOut Aout(D6);
+
 DigitalIn goUp(A2);
 DigitalIn goDn(A1);
 DigitalIn Selet(A0);
@@ -17,7 +20,7 @@ AnalogOut aout(PA_4);
 
 void print(int state);
 
-
+EventQueue SampleQueue;
 EventQueue eventQueue;
 
 void gene(int state) {
@@ -25,7 +28,6 @@ void gene(int state) {
     float periodArray[4] = {1.0, 1.0/2, 1.0/4, 1.0/8};
     int SectionLong[4] = {80, 40 ,20, 10};
     uint16_t Digit_signal = 0;
-
 
     while(1) {
         for(int i = 0; i < SectionLong[state]; i++) {
@@ -44,8 +46,25 @@ void gene(int state) {
             ThisThread::sleep_for(1ms);
         }
     }
+}
 
+int sample_fre = 500;
+float ADCdata[500];
 
+void sampling() {
+    while(1) {
+
+        for (int i = 0; i < sample_fre; i++){
+            //Aout = Ain;
+            ADCdata[i] = Ain;
+            ThisThread::sleep_for(1000ms/sample_fre);
+        }
+        for (int i = 0; i < sample_fre; i++){
+            cout << ADCdata[i] << " \r\n ";
+            //printf("%f\r\n", ADCdata[i]);
+        }
+        ThisThread::sleep_for(5000ms);
+    }
 }
 
 
@@ -75,6 +94,10 @@ int main()
     eventQueue.call(&gene, state);
     Thread eventThread(osPriorityNormal);
     eventThread.start(callback(&eventQueue, &EventQueue::dispatch_forever));
+
+    SampleQueue.call(&sampling);
+    Thread SamplingThread(osPriorityNormal);
+    SamplingThread.start(callback(&SampleQueue, &EventQueue::dispatch_forever));
 
     while(1) {
         ThisThread::sleep_for(1ms);
